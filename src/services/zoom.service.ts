@@ -1,5 +1,6 @@
 import config from "../config/configuration";
 import axios from "axios";
+import normalizeAlternativeHosts from "../utils/helper";
 export class ZoomService {
   async getAccessToken() {
     const client_id = config.ZOOM_CLIENT_ID; // Your Client ID
@@ -32,9 +33,9 @@ export class ZoomService {
     }
   }
 
-  async createZoomMeeting(zoom_meeting_data: any, access_token: string) {
+  async createSingleZoomMeeting(zoom_meeting_data: any, access_token: string) {
     let meetingData: any = {
-      topic: "One-Time Meeting",
+      topic: zoom_meeting_data.topic || "One-Time Meeting",
       type: 2,
       start_time: zoom_meeting_data.start_time,
       duration: 40,
@@ -45,6 +46,44 @@ export class ZoomService {
         join_before_host: false,
         approval_type: 0,
         waiting_room: false,
+      },
+    };
+
+    try {
+      const createMeeting = await axios.post(
+        "https://api.zoom.us/v2/users/me/meetings",
+        zoom_meeting_data,
+        {
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      console.log("Meeting created successfully:", createMeeting.data);
+      return createMeeting.data;
+    } catch (err) {
+      console.log("========>Error creation zoom meeting", err);
+    }
+  }
+
+  async createZoomMeetingWithAlternativeHosts(zoom_meeting_data, access_token) {
+    let meetingData: any = {
+      topic: zoom_meeting_data.topic || "One-Time Meeting",
+      type: 2,
+      start_time: zoom_meeting_data.start_time,
+      duration: 40,
+      timezone: zoom_meeting_data.timezone || "Asia/Kathmandu",
+      settings: {
+        host_video: true,
+        participant_video: true,
+        join_before_host: false,
+        approval_type: 0,
+        waiting_room: false,
+        alternative_hosts: normalizeAlternativeHosts(
+          zoom_meeting_data.alternative_hosts
+        ),
+        alternative_hosts_email_notification: true,
       },
     };
     try {
