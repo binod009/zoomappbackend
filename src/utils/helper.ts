@@ -8,4 +8,7 @@ function normalizeAlternativeHosts(input?: string[] | string): string | undefine
   return str ? str : undefined;
 }
 
-export default normalizeAlternativeHosts;
+
+
+
+export { normalizeAlternativeHosts };
