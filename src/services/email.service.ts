@@ -51,7 +51,7 @@ export const sendMailAsync = async ({
 };
 
 export const notifyAlternativeHost = async (
-  alternativeHostEmail: string,
+  alternativeHostEmail: string | string[],
   joinUrl: string
 ) => {
   const subject = "Zoom Meeting Invitation";
@@ -61,10 +61,26 @@ export const notifyAlternativeHost = async (
     <p>Join the meeting using this link: <a href="${joinUrl}">${joinUrl}</a></p>
     <p>Best regards,<br/>Your Team</p>
   `;
-  await sendMailAsync({
-    to: alternativeHostEmail,
-    subject,
-    html: htmlContent,
-    text: `Hello,\nYou have been added as an alternative host for a Zoom meeting.\nJoin the meeting using this link: ${joinUrl}\nBest regards,\nYour Team`,
-  });
+
+  if (Array.isArray(alternativeHostEmail)) {
+    // Send mail to each recipient separately
+    await Promise.all(
+      alternativeHostEmail.map((email) =>
+        sendMailAsync({
+          to: email,
+          subject,
+          html: htmlContent,
+          text: `Hello,\nYou have been added as an alternative host for a Zoom meeting.\nJoin the meeting using this link: ${joinUrl}\nBest regards,\nYour Team`,
+        })
+      )
+    );
+  } else {
+    // Single recipient
+    await sendMailAsync({
+      to: alternativeHostEmail,
+      subject,
+      html: htmlContent,
+      text: `Hello,\nYou have been added as an alternative host for a Zoom meeting.\nJoin the meeting using this link: ${joinUrl}\nBest regards,\nYour Team`,
+    });
+  }
 };
