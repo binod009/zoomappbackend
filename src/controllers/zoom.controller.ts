@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import zoom_svc from "../services/zoom.service";
 import asyncHandler from "../utils/asyncHandler";
-import { join } from "path";
+import { notifyAlternativeHost } from "../services/email.service";
 
 const createMeeting = asyncHandler(async (req: Request, res: Response) => {
   const access_token = await zoom_svc.getAccessToken();
@@ -28,6 +28,7 @@ const createMeeting = asyncHandler(async (req: Request, res: Response) => {
     },
   });
 });
+
 const createMeetingWithAlternativeHostsController = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
     const access_token = await zoom_svc.getAccessToken();
@@ -44,17 +45,19 @@ const createMeetingWithAlternativeHostsController = asyncHandler(
       meetingData,
       access_token
     );
-    console.log("this is createMeetingWithalternativeHostData", meetingData);
-    res.status(200).json({
-      status: 200,
-      message: "Created successfully",
-      result: {
-        start_url: meeting.start_url,
-        join_url: meeting.join_url,
-        meeting_id: meeting.id,
-        topic: meeting.topic,
-      },
-    });
+    if (meeting !== null) {
+      await notifyAlternativeHost(alternative_hosts, meeting.join_url);
+      res.status(200).json({
+        status: 200,
+        message: "Created successfully",
+        result: {
+          start_url: meeting.start_url,
+          join_url: meeting.join_url,
+          meeting_id: meeting.id,
+          topic: meeting.topic,
+        },
+      });
+    }
   }
 );
 

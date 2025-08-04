@@ -100,7 +100,6 @@ export class ZoomService {
           },
         }
       );
-
       return createMeeting.data;
     } catch (err) {
       throw err;
