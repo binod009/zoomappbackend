@@ -8,7 +8,9 @@ function normalizeAlternativeHosts(input?: string[] | string): string | undefine
   return str ? str : undefined;
 }
 
+function formatEmails(emails: string[]): string {
+  return emails.filter(Boolean).join(",");
+}
 
 
-
-export { normalizeAlternativeHosts };
+export { normalizeAlternativeHosts, formatEmails };

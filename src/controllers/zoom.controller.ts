@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import zoom_svc from "../services/zoom.service";
 import asyncHandler from "../utils/asyncHandler";
 import { notifyAlternativeHost } from "../services/email.service";
+import { normalizeAlternativeHosts } from "../utils/helper";
 
 const createMeeting = asyncHandler(async (req: Request, res: Response) => {
   const access_token = await zoom_svc.getAccessToken();
@@ -46,7 +47,11 @@ const createMeetingWithAlternativeHostsController = asyncHandler(
       access_token
     );
     if (meeting !== null) {
-      await notifyAlternativeHost(alternative_hosts, meeting.join_url);
+      await notifyAlternativeHost(
+        alternative_hosts,
+        meeting.join_url,
+        meeting.topic
+      );
       res.status(200).json({
         status: 200,
         message: "Created successfully",
@@ -62,28 +67,14 @@ const createMeetingWithAlternativeHostsController = asyncHandler(
 );
 
 // participants screen sharing can be done through zoom dashboard only through api is not available
-const createMeetingWithScreenSharingController = asyncHandler(
+const createMeetingJoinBeforeHostController = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { start_time, duration, topic, timezone } = req.body;
+    const { start_time, duration, topic, timezone, alternative_hosts } =
+      req.body;
     const access_token = await zoom_svc.getAccessToken();
-    const payload = {
-      topic,
-      type: 2, // Scheduled meeting
-      start_time,
-      duration,
-      timezone,
-      settings: {
-        host_video: true,
-        participant_video: true,
-        join_before_host: true, // ✅ Allow joining before host
-
-        approval_type: 0, // Auto approval
-        waiting_room: false, // ❌ Disable waiting room to allow entry before host
-      },
-    };
-
+  
     const response = await zoom_svc.createSingleZoomMeeting(
-      payload,
+     {start_time,duration,topic,timezone,alternative_hosts},
       access_token
     );
 
@@ -103,5 +94,5 @@ const createMeetingWithScreenSharingController = asyncHandler(
 export {
   createMeeting,
   createMeetingWithAlternativeHostsController,
-  createMeetingWithScreenSharingController,
+  createMeetingJoinBeforeHostController,
 };

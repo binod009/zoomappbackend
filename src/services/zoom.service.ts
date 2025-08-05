@@ -1,9 +1,9 @@
 import config from "../config/configuration";
 import axios from "axios";
 
-import { response } from "express";
-import AppError from "../utils/AppError";
 import { normalizeAlternativeHosts } from "../utils/helper";
+import { notifyAlternativeHost } from "./email.service";
+
 export class ZoomService {
   async getAccessToken() {
     const client_id = config.ZOOM_CLIENT_ID; // Your Client ID
@@ -27,7 +27,7 @@ export class ZoomService {
       const zoom_access_token = response.data.access_token;
       return zoom_access_token;
     } catch (error: any) {
-      console.log("zoom accesstoken error", error);
+      console.log("zoom access token error", error);
       if (error.response) {
         console.error("Error response from Zoom API:", error.response.data);
       } else {
@@ -37,17 +37,24 @@ export class ZoomService {
   }
 
   async createSingleZoomMeeting(zoom_meeting_data: any, access_token: string) {
-    let meetingData: any = {
-      topic: zoom_meeting_data.topic || "One-Time Meeting",
+    const meetingData = {
+      topic: zoom_meeting_data.topic ?? "One-Time Meeting",
       type: 2,
       start_time: zoom_meeting_data.start_time,
-      duration: 40,
-      timezone: zoom_meeting_data.timezone || "Asia/Kathmandu",
+      duration: zoom_meeting_data.duration ?? 40,
+      timezone: zoom_meeting_data.timezone ?? "Asia/Kathmandu",
       settings: {
-        ...zoom_meeting_data.settings,
+        host_video: true,
+        participant_video: true,
+        join_before_host: true, // or false if needed
+        approval_type: 0,
+        waiting_room: false,
+        alternative_hosts: normalizeAlternativeHosts(
+          zoom_meeting_data.alternative_hosts
+        ),
+        alternative_hosts_email_notification: true,
       },
     };
-
     try {
       const createMeeting = await axios.post(
         "https://api.zoom.us/v2/users/me/meetings",
@@ -59,7 +66,12 @@ export class ZoomService {
           },
         }
       );
-      console.log("Meeting created successfully:", createMeeting.data);
+
+      await notifyAlternativeHost(
+        zoom_meeting_data.alternative_hosts,
+        createMeeting.data.join_url,
+        meetingData.topic
+      );
       return createMeeting.data;
     } catch (err) {
       console.log("========>Error creation zoom meeting", err);

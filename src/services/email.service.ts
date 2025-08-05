@@ -1,9 +1,11 @@
 import nodemailer from "nodemailer";
 
 import config from "../config/configuration";
+import { formatEmails } from "../utils/helper";
 
 interface EmailOptions {
   to: string;
+  cc: string;
   subject: string;
   text?: string;
   html?: string;
@@ -24,6 +26,7 @@ const transporter = nodemailer.createTransport({
 // Send email with .ics file
 export const sendMailAsync = async ({
   to,
+  cc,
   subject,
   html,
   text = "Please find your calendar invite attached.",
@@ -31,6 +34,7 @@ export const sendMailAsync = async ({
   const mailOptions = {
     from: config.NODEMAILER_USER,
     to,
+    cc,
     subject,
     html,
     text,
@@ -50,37 +54,34 @@ export const sendMailAsync = async ({
   }
 };
 
-export const notifyAlternativeHost = async (
+export async function notifyAlternativeHost(
   alternativeHostEmail: string | string[],
-  joinUrl: string
-) => {
-  const subject = "Zoom Meeting Invitation";
+  joinUrl: string,
+  topic:string
+) {
+  const subject = `Zoom meeting invite, topic:${topic}`;
   const htmlContent = `
     <p>Hello,</p>
     <p>You have been added as an alternative host for a Zoom meeting.</p>
     <p>Join the meeting using this link: <a href="${joinUrl}">${joinUrl}</a></p>
     <p>Best regards,<br/>Your Team</p>
   `;
-
   if (Array.isArray(alternativeHostEmail)) {
-    // Send mail to each recipient separately
-    await Promise.all(
-      alternativeHostEmail.map((email) =>
-        sendMailAsync({
-          to: email,
-          subject,
-          html: htmlContent,
-          text: `Hello,\nYou have been added as an alternative host for a Zoom meeting.\nJoin the meeting using this link: ${joinUrl}\nBest regards,\nYour Team`,
-        })
-      )
-    );
+    let emails = formatEmails(alternativeHostEmail);
+    await sendMailAsync({
+      to: alternativeHostEmail[0],
+      cc: emails,
+      subject,
+      html: htmlContent,
+      text: `Hello,\nYou have been added as an alternative host for a Zoom meeting.\nJoin the meeting using this link: ${joinUrl}\nBest regards,\nYour Team`,
+    });
   } else {
-    // Single recipient
     await sendMailAsync({
       to: alternativeHostEmail,
+      cc: "",
       subject,
       html: htmlContent,
       text: `Hello,\nYou have been added as an alternative host for a Zoom meeting.\nJoin the meeting using this link: ${joinUrl}\nBest regards,\nYour Team`,
     });
   }
-};
+}
